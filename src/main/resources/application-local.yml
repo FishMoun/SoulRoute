@@ -1,9 +1,0 @@
-spring:
-  application:
-    name: spring-ai-alibaba-qwq-chat-client-example
-  ai:
-    dashscope:
-      api-key:  sk-2ad107f74e584e57aa2253c25c0867bc
-      chat:
-        options:
-          model: qwen-plus
