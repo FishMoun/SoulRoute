@@ -36,3 +36,4 @@ build/
 demo/
 application-local.yml
 tmp/
+*.log

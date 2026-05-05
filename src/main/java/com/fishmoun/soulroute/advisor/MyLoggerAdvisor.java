@@ -1,16 +1,17 @@
 package com.fishmoun.soulroute.advisor;
 
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.ai.chat.client.advisor.api.*;
-import org.springframework.ai.chat.model.MessageAggregator;
-import reactor.core.publisher.Flux;
+import org.springframework.ai.chat.client.ChatClientRequest;
+import org.springframework.ai.chat.client.ChatClientResponse;
+import org.springframework.ai.chat.client.advisor.api.AdvisorChain;
+import org.springframework.ai.chat.client.advisor.api.BaseAdvisor;
 
 /**
  * 自定义日志 Advisor
  * 打印 info 级别日志、只输出单次用户提示词和 AI 回复的文本
  */
 @Slf4j
-public class MyLoggerAdvisor implements CallAroundAdvisor, StreamAroundAdvisor {
+public class MyLoggerAdvisor implements BaseAdvisor {
 
     @Override
     public String getName() {
@@ -22,25 +23,19 @@ public class MyLoggerAdvisor implements CallAroundAdvisor, StreamAroundAdvisor {
         return 0;
     }
 
-    private AdvisedRequest before(AdvisedRequest request) {
-        log.info("AI Request: {}", request.userText());
+    @Override
+    public ChatClientRequest before(ChatClientRequest request, AdvisorChain chain) {
+        if (request.prompt().getUserMessage() != null) {
+            log.info("AI Request: {}", request.prompt().getUserMessage().getText());
+        }
         return request;
     }
 
-    private void observeAfter(AdvisedResponse advisedResponse) {
-        log.info("AI Response: {}", advisedResponse.response().getResult().getOutput().getText());
-    }
-
-    public AdvisedResponse aroundCall(AdvisedRequest advisedRequest, CallAroundAdvisorChain chain) {
-        advisedRequest = this.before(advisedRequest);
-        AdvisedResponse advisedResponse = chain.nextAroundCall(advisedRequest);
-        this.observeAfter(advisedResponse);
-        return advisedResponse;
-    }
-
-    public Flux<AdvisedResponse> aroundStream(AdvisedRequest advisedRequest, StreamAroundAdvisorChain chain) {
-        advisedRequest = this.before(advisedRequest);
-        Flux<AdvisedResponse> advisedResponses = chain.nextAroundStream(advisedRequest);
-        return (new MessageAggregator()).aggregateAdvisedResponse(advisedResponses, this::observeAfter);
+    @Override
+    public ChatClientResponse after(ChatClientResponse response, AdvisorChain chain) {
+        if (response.chatResponse() != null && response.chatResponse().getResult() != null) {
+            log.info("AI Response: {}", response.chatResponse().getResult().getOutput().getText());
+        }
+        return response;
     }
 }

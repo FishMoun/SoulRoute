@@ -6,27 +6,26 @@ import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.client.advisor.MessageChatMemoryAdvisor;
-import org.springframework.ai.chat.client.advisor.QuestionAnswerAdvisor;
 import org.springframework.ai.chat.client.advisor.api.Advisor;
 import org.springframework.ai.chat.memory.ChatMemory;
-import org.springframework.ai.chat.memory.InMemoryChatMemory;
 import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.ai.chat.model.ChatResponse;
 import org.springframework.ai.tool.ToolCallback;
 import org.springframework.ai.tool.ToolCallbackProvider;
 import org.springframework.ai.vectorstore.VectorStore;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
 
-import static org.springframework.ai.chat.client.advisor.AbstractChatMemoryAdvisor.CHAT_MEMORY_CONVERSATION_ID_KEY;
-import static org.springframework.ai.chat.client.advisor.AbstractChatMemoryAdvisor.CHAT_MEMORY_RETRIEVE_SIZE_KEY;
+import static org.springframework.ai.chat.memory.ChatMemory.CONVERSATION_ID;
 
 @Component
 @Slf4j
 public class TravelApp {
 
     private final ChatClient chatClient;
+    private final ToolCallbackProvider toolCallbackProvider;
 
     private static final String SYSTEM_PROMPT = "扮演资深旅行规划师与目的地攻略专家。开场向用户表明身份，告知用户可咨询出行计划、路线安排、预算控制、住宿交通、美食打卡与避坑建议等旅行问题。" +
             "围绕自由行、情侣出游、家庭出游、朋友结伴、商务差旅五种场景提问：" +
@@ -41,14 +40,15 @@ public class TravelApp {
             "若用户信息不足，主动追问关键细节；若用户时间有限，优先生成高效路线；若用户预算有限，优先推荐高性价比方案；若用户已有目标地点，重点补充玩法亮点与避坑建议。";
 
 
-    public TravelApp(ChatModel dashscopeChatModel) {
+    public TravelApp(ChatModel dashscopeChatModel, ObjectProvider<ToolCallbackProvider> toolCallbackProvider) {
         // 初始化基于内存的对话记忆
         String fileDir = System.getProperty("user.dir") + "/chat-memory";
         ChatMemory chatMemory = new FileBasedChatMemory(fileDir);
+        this.toolCallbackProvider = toolCallbackProvider.getIfAvailable();
         chatClient = ChatClient.builder(dashscopeChatModel)
                 .defaultSystem(SYSTEM_PROMPT)
                 .defaultAdvisors(
-                        new MessageChatMemoryAdvisor(chatMemory)
+                        MessageChatMemoryAdvisor.builder(chatMemory).build()
                 )
                 .build();
 
@@ -58,8 +58,7 @@ public class TravelApp {
         ChatResponse response = chatClient
                 .prompt()
                 .user(message)
-                .advisors(spec -> spec.param(CHAT_MEMORY_CONVERSATION_ID_KEY, chatId)
-                        .param(CHAT_MEMORY_RETRIEVE_SIZE_KEY, 10))
+                .advisors(spec -> spec.param(CONVERSATION_ID, chatId))
                 .call()
                 .chatResponse();
         String content = response.getResult().getOutput().getText();
@@ -71,8 +70,7 @@ public class TravelApp {
                 .prompt()
                 .system(SYSTEM_PROMPT + "每次对话后都要生成旅行规划结果，标题为{用户名}的旅行攻略，内容为行程建议列表、预算建议、注意事项。")
                 .user(message)
-                .advisors(spec -> spec.param(CHAT_MEMORY_CONVERSATION_ID_KEY, chatId)
-                        .param(CHAT_MEMORY_RETRIEVE_SIZE_KEY, 10))
+                .advisors(spec -> spec.param(CONVERSATION_ID, chatId))
                 .call()
                 .entity(TravelReport.class);
         log.info("travelReport: {}", travelReport);
@@ -95,8 +93,7 @@ public class TravelApp {
         ChatResponse chatResponse = chatClient
                 .prompt()
                 .user(message)
-                .advisors(spec -> spec.param(CHAT_MEMORY_CONVERSATION_ID_KEY, chatId)
-                        .param(CHAT_MEMORY_RETRIEVE_SIZE_KEY, 10))
+                .advisors(spec -> spec.param(CONVERSATION_ID, chatId))
                 // 开启日志，便于观察效果
                 .advisors(new MyLoggerAdvisor())
                 // 应用增强检索服务（云知识库服务）
@@ -115,11 +112,10 @@ public class TravelApp {
         ChatResponse response = chatClient
                 .prompt()
                 .user(message)
-                .advisors(spec -> spec.param(CHAT_MEMORY_CONVERSATION_ID_KEY, chatId)
-                        .param(CHAT_MEMORY_RETRIEVE_SIZE_KEY, 10))
+                .advisors(spec -> spec.param(CONVERSATION_ID, chatId))
                 // 开启日志，便于观察效果
                 .advisors(new MyLoggerAdvisor())
-                .tools(allTools)
+                .tools((Object[]) allTools)
                 .call()
                 .chatResponse();
         String content = response.getResult().getOutput().getText();
@@ -127,15 +123,14 @@ public class TravelApp {
         return content;
     }
 
-    @Resource
-    private ToolCallbackProvider toolCallbackProvider;
-
     public String doChatWithMcp(String message, String chatId) {
+        if (toolCallbackProvider == null) {
+            return "MCP 工具当前未启用。请检查 spring.ai.mcp.client.enabled 配置和 mcp-servers.json 后再重试。";
+        }
         ChatResponse response = chatClient
                 .prompt()
                 .user(message)
-                .advisors(spec -> spec.param(CHAT_MEMORY_CONVERSATION_ID_KEY, chatId)
-                        .param(CHAT_MEMORY_RETRIEVE_SIZE_KEY, 10))
+                .advisors(spec -> spec.param(CONVERSATION_ID, chatId))
                 // 开启日志，便于观察效果
                 .advisors(new MyLoggerAdvisor())
                 .tools(toolCallbackProvider)

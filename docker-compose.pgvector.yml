@@ -1,0 +1,21 @@
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: soulroute-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: soulroute
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - soulroute_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d soulroute"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  soulroute_pgdata:
