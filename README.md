@@ -1,488 +1,255 @@
-# SoulRoute 🌍✈️
+# SoulRoute 后端
 
-一个基于 Spring AI 和大语言模型的**智能旅行规划助手系统**。通过对话式交互，为用户提供专业的旅行规划建议、行程安排、预算管理和避坑指南。
+SoulRoute 是一个基于 `Spring Boot + Spring AI + PGVector + RAG + Tool Calling + MCP` 的旅行规划智能体后端。系统面向出行规划场景，提供多轮对话、旅行攻略知识库检索、ReAct 工具调用、PDF 攻略生成、用户偏好记忆、会话持久化、Skill 化提示词和自进化沉淀能力。
 
-## 📋 项目概述
+## 核心能力
 
-**SoulRoute** 是一个创新的旅行规划平台，融合了先进的 AI 技术，能够理解用户需求并生成个性化的旅行方案。系统支持多种交互模式（对话、知识库检索、工具调用等），为自由行、情侣出游、家庭出游、朋友结伴和商务差旅等五大场景提供专业指导。
+- **ReAct 智能体**：按 `Think -> Act -> Observe -> Finish` 流程执行任务，支持实时 SSE 步骤输出。
+- **RAG 知识库**：解析本地 `docx` 旅行攻略，切分 chunk，写入 PGVector，支持混合检索。
+- **查询理解增强**：结合规则查询重写、多查询扩展、实体扩展和 LLM Slot Extraction，提高检索命中率。
+- **Tool Calling**：集成旅行知识库检索、网页搜索、网页抓取、文件操作、PDF 生成、资源下载等工具。
+- **MCP 扩展**：保留 Spring AI MCP Client/Server 接入能力，支持外部工具扩展。
+- **用户体系**：支持注册、登录、轻量 Bearer Token。
+- **用户偏好记忆**：支持手动保存旅行偏好，也能从对话上下文自动总结长期偏好。
+- **会话持久化**：登录用户使用 PostgreSQL 会话表，匿名用户兼容 Kryo 文件记忆。
+- **Skill 自进化**：记录 ReAct 轨迹，识别失败模式，生成 Skill Proposal，评估后激活新版本，并支持回滚。
 
-### 核心特性
+## 技术栈
 
-- 🤖 **AI 驱动的对话引擎** - 基于阿里云 DashScope（通义千问） LLM
-- 💾 **对话记忆管理** - 持久化用户对话历史，支持多轮交互
-- 📚 **检索增强生成 (RAG)** - 集成阿里云知识库，获取中国旅行攻略
-- 🛠️ **工具系统集成** - 支持网页搜索、网页爬取、文件操作、PDF生成等工具
-- 🔌 **MCP 客户端支持** - 集成 Model Context Protocol 实现扩展功能
-- 📊 **结构化输出** - 支持生成旅行报告、预算拆分、行程建议等结构化数据
-- 🌐 **跨场景适配** - 针对五种旅行场景的个性化规划策略
-- 📖 **API 文档** - 集成 Knife4j/Swagger-UI 实现在线 API 文档
+- Java 21
+- Spring Boot 3.4.4
+- Spring AI 1.0.0
+- Spring AI Alibaba 1.0.0.2
+- DashScope / Qwen Plus
+- PostgreSQL + PGVector
+- Flyway
+- Kryo
+- iText
+- Jsoup
+- Knife4j / Springdoc OpenAPI
 
-## 🛠️ 技术栈
+## 项目结构
 
-### 后端框架
-- **Java 21** - 编程语言
-- **Spring Boot 3.4.4** - 应用框架
-- **Spring AI 1.0.0** - AI 集成框架
-- **Spring AI Alibaba 1.0.0.2** - 阿里云 AI 集成
-
-### AI 服务
-- **DashScope SDK 2.19.1** - 阿里云灵积大模型服务
-- **通义千问 (Qwen-Plus)** - LLM 模型
-- **LangChain4j 1.0.0-beta2** - 大语言模型编程框架
-
-### 数据与存储
-- **PostgreSQL** - 向量数据库 (PGVector)
-- **PGVector Store** - 向量存储和相似度搜索
-
-### 工具库
-- **Hutool 5.8.37** - Java 工具集
-- **Jsoup 1.19.1** - HTML 解析库
-- **iText-core 9.1.0** - PDF 生成库
-- **Kryo 5.6.2** - 高性能序列化库
-- **Lombok 1.18.36** - Java 代码简化
-
-### API 文档
-- **Knife4j 4.4.0** - API 文档与测试工具
-- **Springdoc-OpenAPI** - OpenAPI 3.0 规范支持
-
-## 📦 项目结构
-
-```
-SoulRoute/
-├── src/main/java/com/fishmoun/soulroute/
-│   ├── SoulRouteApplication.java          # 主应用程序
-│   ├── app/
-│   │   └── TravelApp.java                 # 核心旅行规划应用
-│   ├── controller/
-│   │   └── HealthController.java          # 健康检查端点
-│   ├── config/
-│   │   ├── TravelAppRagCloudAdvisorConfig.java  # RAG 配置
-│   │   ├── ToolRegistration.java          # 工具注册配置
-│   │   └── CorsConfig.java                # CORS 跨域配置
-│   ├── tools/
-│   │   ├── WebSearchTool.java             # 网页搜索工具
-│   │   ├── WebScrapingTool.java           # 网页爬取工具
-│   │   ├── FileOperationTool.java         # 文件操作工具
-│   │   ├── PDFGenerationTool.java         # PDF 生成工具
-│   │   ├── ResourceDownloadTool.java      # 资源下载工具
-│   │   └── TerminalOperationTool.java     # 终端操作工具
-│   ├── chatmemory/
-│   │   └── FileBasedChatMemory.java       # 文件持久化对话记忆
-│   ├── rag/
-│   │   ├── TravelAppDocumentLoader.java   # 文档加载器
-│   │   └── TravelAppVectorStoreConfig.java # 向量存储配置
-│   ├── advisor/
-│   │   └── MyLoggerAdvisor.java           # 日志记录顾问
-│   └── constant/
-│       └── FileConstant.java              # 文件路径常量
-├── src/main/resources/
-│   ├── application.yml                    # 主配置文件
-│   ├── application-local.yml              # 本地配置文件
-│   ├── mcp-servers.json                   # MCP 服务器配置
-│   └── static/templates/                  # 静态资源与模板
-├── pom.xml                                # Maven 项目配置
-└── README.md                              # 项目文档
+```text
+src/main/java/com/fishmoun/soulroute
+├── agent/          # ReAct Agent、步骤、状态和提示词拼装
+├── app/            # TravelApp 传统 ChatClient 能力
+├── auth/           # 注册、登录、Token 和当前用户解析
+├── chatmemory/     # Kryo 文件会话记忆
+├── config/         # CORS、RAG、工具注册等配置
+├── controller/     # REST/SSE 接口
+├── conversation/   # 用户级会话历史
+├── evolution/      # ReAct 轨迹、自进化和 Skill 评估
+├── preference/     # 用户旅行偏好与偏好学习
+├── rag/            # 文档 ETL、PGVector、混合检索、查询理解
+├── skill/          # Skill、版本、激活和回滚
+└── tools/          # Web、PDF、文件、知识库等工具
 ```
 
-## 🚀 快速开始
+## 数据库
 
-### 前置条件
+主要表：
 
-- **Java 21** 或更高版本
-- **Maven 3.6+**
-- **PostgreSQL 12+** (用于向量数据库)
-- **阿里云 DashScope API Key** (获取方式: https://dashscope.aliyun.com)
+- `app_users`：用户注册登录。
+- `user_preferences`：用户旅行偏好。
+- `conversations` / `conversation_messages`：用户级历史会话。
+- `travel_document_chunks`：RAG chunk、metadata 和 embedding。
+- `travel_skills` / `travel_skill_versions`：Skill 主体和版本。
+- `skill_evolution_events`：Skill 沉淀事件。
+- `react_runs` / `react_run_steps`：ReAct 运行轨迹。
+- `skill_evaluation_runs`：Skill 候选版本评估。
+- `skill_activation_history`：Skill 激活和回滚历史。
 
-### 环境配置
+详细说明见项目文档 `DATABASE_DESIGN.md`。
 
-1. **克隆项目**
-   ```bash
-   git clone <repository-url>
-   cd SoulRoute
-   ```
+## 环境要求
 
-2. **配置环境变量**
-   ```bash
-   # 设置阿里云 API Key
-   export DASHSCOPE_API_KEY=your_api_key_here
-   
-   # 或在 application.yml 中配置
-   spring:
-     ai:
-       dashscope:
-         api-key: your_api_key_here
-   ```
+- JDK 21
+- Docker Desktop 或本地 PostgreSQL + pgvector
+- DashScope API Key
+- Maven Wrapper 已包含在项目内
 
-3. **数据库配置**
-   
-   在 `src/main/resources/application-local.yml` 中配置 PostgreSQL 连接：
-   ```yaml
-   spring:
-     datasource:
-       url: jdbc:postgresql://localhost:5432/soulroute
-       username: postgres
-       password: your_password
-     jpa:
-       hibernate:
-         ddl-auto: update
-   ```
+## 启动 PostgreSQL + PGVector
 
-### 编译与运行
-
-1. **编译项目**
-   ```bash
-   mvn clean compile
-   ```
-
-2. **构建项目**
-   ```bash
-   mvn clean package
-   ```
-
-3. **运行应用**
-   ```bash
-   # 方式一: 使用 Maven 运行
-   mvn spring-boot:run
-   
-   # 方式二: 运行 JAR 包
-   java -jar target/soul-route-0.0.1-SNAPSHOT.jar
-   ```
-
-4. **验证应用**
-   ```bash
-   # 健康检查
-   curl http://localhost:8123/api/health
-   
-   # 查看 API 文档
-   # Swagger UI: http://localhost:8123/api/swagger-ui.html
-   # Knife4j: http://localhost:8123/api/doc.html
-   ```
-
-## 📖 API 文档
-
-### 基础 URL
+```powershell
+docker compose -f docker-compose.pgvector.yml up -d
 ```
+
+默认连接配置：
+
+```yaml
+POSTGRES_URL=jdbc:postgresql://localhost:5432/soulroute
+POSTGRES_USER=postgres
+POSTGRES_PASSWORD=postgres
+```
+
+## 环境变量
+
+建议通过环境变量传入敏感配置：
+
+```powershell
+$env:DASHSCOPE_API_KEY="your_dashscope_key"
+$env:SOULROUTE_TOKEN_SECRET="your_random_secret"
+```
+
+可选配置：
+
+```powershell
+$env:SOULROUTE_TOKEN_TTL_HOURS="168"
+```
+
+## 运行后端
+
+普通启动：
+
+```powershell
+.\mvnw.cmd spring-boot:run
+```
+
+如果本地 MCP 初始化不稳定，可以临时禁用 MCP Client：
+
+```powershell
+.\mvnw.cmd spring-boot:run "-Dspring-boot.run.arguments=--spring.ai.mcp.client.enabled=false"
+```
+
+健康检查：
+
+```powershell
+Invoke-RestMethod http://localhost:8123/api/health
+```
+
+## 构建与测试
+
+```powershell
+.\mvnw.cmd -q -DskipTests package
+```
+
+RAG 召回评估测试：
+
+```powershell
+.\mvnw.cmd -Dtest=RagRecallEvaluationTest test
+```
+
+评估报告输出到：
+
+```text
+target/rag-recall-evaluation.md
+```
+
+## RAG 配置
+
+核心配置位于 `src/main/resources/application.yml`：
+
+```yaml
+soulroute:
+  rag:
+    documents-location: classpath*:com/fishmoun/soulroute/data/**/*.docx
+    index-on-startup: false
+    top-k: 5
+    similarity-threshold: 0.65
+    hybrid:
+      vector-top-k: 12
+      metadata-top-k: 12
+      vector-weight: 0.7
+      metadata-weight: 0.3
+    query-expansion:
+      enabled: true
+      max-vector-queries: 6
+    query-understanding:
+      enabled: true
+```
+
+说明：
+
+- `index-on-startup=false` 避免每次启动重复 embedding。
+- 手动重建索引时，可临时改为 `true` 或增加专用 reindex 接口。
+- 查询理解会额外调用一次大模型，能提升模糊表达理解能力，但会增加延迟和模型调用成本。
+
+## 主要 API
+
+基础路径：
+
+```text
 http://localhost:8123/api
 ```
 
-### 端点说明
+### 认证
 
-#### 1. 健康检查
 ```http
-GET /health
-```
-**响应:**
-```json
-{
-  "status": "ok"
-}
+POST /auth/register
+POST /auth/login
 ```
 
-#### 2. 基础对话
+### 用户偏好
+
 ```http
-POST /travel/chat
-```
-**参数:**
-```json
-{
-  "message": "我想去云南旅游，请帮我规划一个5天的行程",
-  "chatId": "user_123"
-}
+GET /users/me/preferences
+PUT /users/me/preferences
 ```
 
-#### 3. 生成旅行报告
+### ReAct 对话
+
 ```http
-POST /travel/chat-with-report
-```
-**参数:**
-```json
-{
-  "message": "我是一个独自旅行者，想去西安游玩",
-  "chatId": "user_123"
-}
+POST /travel/react
+POST /travel/react/stream
 ```
 
-#### 4. 知识库检索增强对话
+`/travel/react/stream` 使用 SSE 返回：
+
+- `status`：智能体状态
+- `step`：工具调用步骤
+- `final`：最终结果
+- `error`：错误信息
+
+### 历史会话
+
 ```http
-POST /travel/chat-with-rag
-```
-**参数:**
-```json
-{
-  "message": "三亚有哪些必去景点?",
-  "chatId": "user_123"
-}
+GET /travel/conversations
+GET /travel/conversations/{chatId}
+DELETE /travel/conversations/{chatId}
 ```
 
-#### 5. 工具调用对话
+### PDF 下载
+
 ```http
-POST /travel/chat-with-tools
-```
-**参数:**
-```json
-{
-  "message": "帮我搜索厦门的美食推荐",
-  "chatId": "user_123"
-}
+GET /travel/files/pdf/{fileName}
 ```
 
-#### 6. MCP 工具对话
+### Skill 管理
+
 ```http
-POST /travel/chat-with-mcp
-```
-**参数:**
-```json
-{
-  "message": "根据网络搜索信息规划我的旅行",
-  "chatId": "user_123"
-}
+GET /travel/skills
+GET /travel/skills/{skillId}/versions
+POST /travel/skills/evolve
+POST /travel/skills/{skillId}/versions/{versionId}/activate
+POST /travel/skills/{skillId}/rollback/{versionId}
 ```
 
-## 🎯 使用场景
+## Skill 自进化流程
 
-系统针对五种主要旅行场景进行了优化：
+1. ReAct 执行完成后保存运行轨迹。
+2. 系统识别失败模式，如 PDF 失败、检索不准、用户纠错、工具失败。
+3. 根据失败类型生成 Skill Proposal。
+4. 新版本先写入 `DRAFT`。
+5. 读取历史同类失败任务做轻量评估。
+6. 达标后自动激活为 `ACTIVE`，旧版本变为 `INACTIVE`。
+7. 所有版本保留，可通过接口回滚。
 
-### 1. 自由行 🧑‍🤝‍🧑
-- 重点信息: 目的地、出发地、天数、预算、兴趣偏好
-- 轻松游 vs 深度游选择
-- **输出:** 详细行程单、景点攻略、美食推荐
+当前评估是工程启发式评估，后续可升级为离线测试集回放或 LLM Judge。
 
-### 2. 情侣出游 💕
-- 重点信息: 浪漫氛围、拍照打卡、特色住宿、美食体验
-- 行程节奏调整
-- **输出:** 浪漫路线、拍照地点、烛光晚餐推荐
+## 本地模拟测试
 
-### 3. 家庭出游 👨‍👩‍👧‍👦
-- 重点信息: 同行人员 (老人/小孩)、舒适度、交通便利性
-- 安全性与亲子项目
-- **输出:** 亲子行程、便利交通方案、安全提示
+项目顶层提供了模拟脚本：
 
-### 4. 朋友结伴 👯
-- 重点信息: 人数、游玩偏好、娱乐项目、夜生活、性价比
-- 分工建议
-- **输出:** 团体行程、娱乐安排、AA 预算方案
-
-### 5. 商务差旅 💼
-- 重点信息: 出差城市、停留时间、会议地点、可自由时段
-- 高效出行与体验平衡
-- **输出:** 高效行程、会议地点周边、短途休闲方案
-
-## 🔌 功能模块详解
-
-### 1. 对话引擎 (TravelApp)
-核心应用程序，提供多种交互模式:
-- **基础对话** - 标准 AI 对话
-- **对话记忆** - 维护多轮对话历史
-- **RAG 检索** - 集成知识库信息
-- **工具调用** - 执行外部工具
-- **MCP 集成** - 扩展功能支持
-
-### 2. 工具系统
-集成多个外部工具:
-- **网页搜索 (WebSearchTool)** - 百度搜索引擎集成
-- **网页爬取 (WebScrapingTool)** - Jsoup HTML 解析
-- **文件操作 (FileOperationTool)** - 本地文件处理
-- **PDF 生成 (PDFGenerationTool)** - iText PDF 创建
-- **资源下载 (ResourceDownloadTool)** - 网络资源下载
-- **终端操作 (TerminalOperationTool)** - 系统命令执行
-
-### 3. 数据持久化
-- **对话记忆** - 文件系统持久化用户对话
-- **向量存储** - PGVector 存储文档向量
-- **知识库** - 阿里云知识库集成
-
-### 4. API 文档
-- **Swagger UI** - 标准 OpenAPI 3.0 文档
-- **Knife4j** - 增强的 API 文档与测试工具
-
-## ⚙️ 配置说明
-
-### application.yml 主要配置
-
-```yaml
-spring:
-  application:
-    name: SoulRoute
-  ai:
-    # 阿里云 DashScope 配置
-    dashscope:
-      api-key: ${DASHSCOPE_API_KEY}  # API Key
-      chat:
-        options:
-          model: qwen-plus             # 使用通义千问 Plus 模型
-    # MCP 服务器配置
-    mcp:
-      server:
-        type: SYNC                     # 同步模式
-      client:
-        stdio:
-          servers-configuration: classpath:mcp-servers.json
-
-server:
-  port: 8123                          # 应用端口
-  servlet:
-    context-path: /api                # 路径前缀
-
-springdoc:
-  swagger-ui:
-    path: /swagger-ui.html            # Swagger UI 路径
-
-knife4j:
-  enable: true                        # 启用 Knife4j
-  setting:
-    language: zh_cn                   # 中文界面
-
-search-api:
-  api-key: ${SEARCH_API_KEY}         # 搜索 API Key
+```powershell
+..\simulate_agent_usage.ps1
 ```
 
-## 📝 对话记忆
+该脚本会模拟用户注册、偏好填写、多轮 ReAct 对话、Skill evolve/activate/rollback，并生成测试报告。
 
-系统使用 `FileBasedChatMemory` 将对话历史持久化到文件系统:
+## 注意事项
 
-```
-chat-memory/
-├── user_123/
-│   └── conversation_001.dat
-├── user_456/
-│   └── conversation_001.dat
-└── ...
-```
-
-每个用户的对话历史独立存储，使用 Kryo 序列化格式。
-
-## 🗄️ 向量数据库
-
-使用 PostgreSQL + PGVector 存储文档向量:
-
-```sql
--- 向量存储表示例
-CREATE TABLE document_vector (
-    id SERIAL PRIMARY KEY,
-    content TEXT,
-    embedding vector(1536),
-    metadata JSONB
-);
-```
-
-## 🚨 常见问题
-
-### Q: 如何获取阿里云 DashScope API Key?
-A: 访问 https://dashscope.aliyun.com，注册账户并创建 API Key。
-
-### Q: 支持哪些 LLM 模型?
-A: 默认配置使用 `qwen-plus`，支持阿里云提供的所有模型:
-- qwen-turbo (快速)
-- qwen-plus (平衡)
-- qwen-max (高质量)
-- qwen-max-longcontext (超长文本)
-
-### Q: 如何扩展工具功能?
-A: 在 `tools` 目录创建新类，使用 `@Tool` 注解标记方法，然后在 `ToolRegistration` 中注册。
-
-### Q: 知识库如何更新?
-A: 通过阿里云 DashScope 控制台上传文档到 "中国旅行攻略" 知识库索引。
-
-### Q: 支持离线运行吗?
-A: 不支持。系统依赖阿里云 DashScope API 和知识库服务。
-
-## 📊 系统架构
-
-```
-┌─────────────────────────────────────────────────────────────┐
-│                    客户端应用                                  │
-└────────────────────────┬────────────────────────────────────┘
-                         │
-                    HTTP/REST
-                         │
-┌─────────────────────────┴────────────────────────────────────┐
-│                   Spring Boot 应用                           │
-│  ┌─────────────────────────────────────────────────────────┐ │
-│  │                  Controller Layer                       │ │
-│  │  • HealthController                                    │ │
-│  │  • ChatController (隐含)                               │ │
-│  └────────────────────┬────────────────────────────────────┘ │
-│                       │                                      │
-│  ┌────────────────────┴────────────────────────────────────┐ │
-│  │                  Application Layer                     │ │
-│  │  • TravelApp (核心业务逻辑)                             │ │
-│  │  • Advisors (日志、内存管理、RAG)                       │ │
-│  │  • Tools (工具调用)                                     │ │
-│  └────────────────────┬────────────────────────────────────┘ │
-│                       │                                      │
-│  ┌────────────────────┴────────────────────────────────────┐ │
-│  │                  Integration Layer                     │ │
-│  │  • Spring AI ChatClient                                │ │
-│  │  • DashScope API Client                                │ │
-│  │  • MCP Client                                          │ │
-│  │  • PGVector Store                                      │ │
-│  │  • File System (Chat Memory)                           │ │
-│  └────────────────────┬────────────────────────────────────┘ │
-└─────────────────────────┼────────────────────────────────────┘
-                         │
-        ┌────────────────┼────────────────┐
-        │                │                │
-   ┌────┴─────┐    ┌─────┴──────┐   ┌─────┴──────┐
-   │DashScope  │    │PostgreSQL  │   │   File     │
-   │API        │    │+ PGVector  │   │  System    │
-   │(LLM/RAG)  │    │(Vector DB) │   │ (Memory)   │
-   └───────────┘    └────────────┘   └────────────┘
-```
-
-## 🧪 测试
-
-### 运行测试
-```bash
-mvn test
-```
-
-### 手动测试 API
-使用 Swagger UI 或 Knife4j 进行交互式测试:
-```
-http://localhost:8123/api/doc.html
-```
-
-## 📦 打包部署
-
-### 构建 Docker 镜像
-```bash
-mvn clean package
-docker build -t soulroute:latest .
-docker run -p 8123:8123 \
-  -e DASHSCOPE_API_KEY=your_key \
-  soulroute:latest
-```
-
-### 部署到云服务
-```bash
-# 构建 JAR
-mvn clean package
-
-# 上传到服务器并运行
-java -jar soul-route-0.0.1-SNAPSHOT.jar \
-  --spring.ai.dashscope.api-key=your_key
-```
-
-## 🤝 贡献指南
-
-欢迎提交 Issue 和 Pull Request！
-
-## 📄 许可证
-
-本项目采用 MIT 许可证。
-
-## 👨‍💻 作者
-
-- **开发者**: Fishmoun Team
-- **更新时间**: 2024-2025
-
-## 🔗 相关资源
-
-- [Spring AI 官方文档](https://spring.io/projects/spring-ai)
-- [阿里云 DashScope](https://dashscope.aliyun.com)
-- [Model Context Protocol](https://modelcontextprotocol.io)
-- [Knife4j 文档](https://doc.xiaomingming.com/knife4j/)
-
----
-
-**⭐ 如果这个项目对你有帮助，请给个 Star!**
+- 不要把真实 API Key 写入仓库，生产环境请使用环境变量。
+- `chat-memory/` 下的 Kryo 文件属于运行数据，一般不应提交。
+- `tmp/`、`run-logs/`、`target/`、前端 `dist/` 都属于生成物。
+- 如果启用 MCP Client 时启动超时，可以先用 `--spring.ai.mcp.client.enabled=false` 启动核心能力。

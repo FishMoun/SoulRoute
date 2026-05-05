@@ -1,6 +1,7 @@
 package com.fishmoun.soulroute.config;
 
 import com.fishmoun.soulroute.tools.*;
+import org.springframework.ai.rag.retrieval.search.DocumentRetriever;
 import org.springframework.ai.support.ToolCallbacks;
 import org.springframework.ai.tool.ToolCallback;
 import org.springframework.beans.factory.annotation.Value;
@@ -14,7 +15,12 @@ public class ToolRegistration {
     private String searchApiKey;
 
     @Bean
-    public ToolCallback[] allTools() {
+    public TravelKnowledgeTool travelKnowledgeTool(DocumentRetriever travelDocumentRetriever) {
+        return new TravelKnowledgeTool(travelDocumentRetriever);
+    }
+
+    @Bean
+    public ToolCallback[] allTools(TravelKnowledgeTool travelKnowledgeTool) {
         FileOperationTool fileOperationTool = new FileOperationTool();
         WebSearchTool webSearchTool = new WebSearchTool(searchApiKey);
         WebScrapingTool webScrapingTool = new WebScrapingTool();
@@ -27,7 +33,8 @@ public class ToolRegistration {
                 webScrapingTool,
                 resourceDownloadTool,
                 terminalOperationTool,
-                pdfGenerationTool
+                pdfGenerationTool,
+                travelKnowledgeTool
         );
     }
 }

@@ -37,3 +37,4 @@ demo/
 application-local.yml
 tmp/
 *.log
+chat-memory/*.kryo

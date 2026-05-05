@@ -6,6 +6,10 @@ spring:
     username: ${POSTGRES_USER:postgres}
     password: ${POSTGRES_PASSWORD:postgres}
     driver-class-name: org.postgresql.Driver
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
+    baseline-version: 0
   ai:
     dashscope:
       api-key: ${DASHSCOPE_API_KEY:sk-2ad107f74e584e57aa2253c25c0867bc}
@@ -48,9 +52,17 @@ search-api:
   api-key: ef2LQ2keTvP83ZGQwiKemghX
 
 soulroute:
+  auth:
+    token-secret: ${SOULROUTE_TOKEN_SECRET:soulroute-dev-secret-change-me}
+    token-ttl-hours: ${SOULROUTE_TOKEN_TTL_HOURS:168}
+  preference:
+    learning:
+      enabled: true
+  agent:
+    max-steps: 12
   rag:
     documents-location: classpath*:com/fishmoun/soulroute/data/**/*.docx
-    index-on-startup: true
+    index-on-startup: false
     chunk-size: 800
     chunk-overlap-chars: 120
     min-chunk-size-chars: 120
@@ -63,6 +75,11 @@ soulroute:
       metadata-top-k: 12
       vector-weight: 0.7
       metadata-weight: 0.3
+    query-expansion:
+      enabled: true
+      max-vector-queries: 6
+    query-understanding:
+      enabled: true
     vector:
       schema-name: public
       table-name: travel_document_chunks
